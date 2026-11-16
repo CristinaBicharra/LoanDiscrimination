@@ -4,6 +4,31 @@ Code and simulated data for the paper **"The Cost of Fairness: Examining Hidden 
 
 The repository measures whether two demographic groups with the same credit score are charged different interest rates, and estimates what it would cost a bank to reduce that difference.
 
+## What is here and what is not
+
+The paper has two parts, and this repository covers the first one.
+
+| Part of the paper | Data | In this repository? |
+|---|---|---|
+| Illustration of the method (fairness metrics, cost of fairness, Figure 4) | Simulated dataset | Yes: data, code and results |
+| Case study of a Brazilian bank (Tables 1 to 4, Figures 7 to 9) | Confidential loan records | No: the data cannot be shared, so those results appear only in the paper |
+
+No bank data, and no result computed from bank data, is stored in this repository.
+
+## Results
+
+The results on the simulated dataset are in [`outputs/results.md`](outputs/results.md). The page opens directly on GitHub, with tables and figures, so nothing needs to be installed to read it.
+
+Summary of what the report shows:
+
+- **Dataset.** 10,000 simulated contracts, 5,037 for women and 4,963 for men, with the same default rate in both groups.
+- **Price gap.** Women are charged 127.9% a year on average and men 119.8%.
+- **Same credit score, different price.** Comparing only clients in the same credit score bin, women pay 8.5 percentage points more (weighted average; 11.2 in the simple average). The difference is statistically significant in all 12 bins.
+- **Weighted Demographic Fairness Index (WDI).** 0.95 on a scale from -1 to 1, where 0 means no disparity: men are concentrated in the lowest interest rate ranges.
+- **Cost of fairness.** Removing 20% of the gap for the four best credit score bins costs the lender about 18,800. Removing the whole gap for every client costs about 1.24 million, or 3.6% of the interest income from paid contracts.
+
+These numbers describe simulated data built to contain discrimination. They show how the method works and are not findings about any real lender.
+
 ## Data
 
 `data/Simulated_Dataset.csv` contains 10,000 simulated loan contracts with gender-based price discrimination built in. It illustrates the method. The bank dataset analyzed in the paper is confidential and is not included here.
