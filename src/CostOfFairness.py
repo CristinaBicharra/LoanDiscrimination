@@ -1,140 +1,86 @@
-#!/usr/bin/env python
-# coding: utf-8
+"""Cost for the bank of reducing an interest rate disparity.
 
-# In[1]:
+Following the paper, the expected revenue lost in a credit score bin is
 
+    cost = paid_share * avg_loan * rate_reduction * n_contracts
 
-#calculate_fairness_cost:
-#Purpose: Adjusts interest rates with a fixed discount across a specific credit score range, aiming to equalize rates for a discriminated group up to a certain category.
-#Core Calculation: Total cost is the sum of adjustments for each category up to max_category, based on loan amount, interest rate difference, fairness degree, and non-default probability.
-
-#calculate_fairness_cost_with_decay:
-#Purpose: Adjusts interest rates with a decaying discount for each lower credit score category, providing a gradual decrease in fairness adjustments as credit score worsens.
-#Core Calculation: Total cost is calculated similarly but incorporates a decay_factor, making the discount smaller with each lower category, ensuring a minimum adjustment through min_discount.
+where `rate_reduction` is expressed as a fraction (an interest rate of
+88.20% enters as 0.8820) and `paid_share` is the share of contracts that
+did not default. The dataset stores interest rates in percent, so rate
+differences are divided by 100 before entering the formula.
+"""
 
 import numpy as np
+import pandas as pd
 
-def calculate_fairness_cost(df, Loan_var, CreditScoreBin, parameter, Discriminator, Discriminated, price_discriminator, fairness_degree, max_category, Default_var):
+PERCENT = 100.0
+
+
+def _ordered_bins(series):
+    if isinstance(series.dtype, pd.CategoricalDtype):
+        present = set(series.dropna().unique())
+        return [c for c in series.cat.categories if c in present]
+    return sorted(series.dropna().unique())
+
+
+def _bin_cost(data, bin_label, loan_var, credit_score_bin, parameter,
+              discriminated, discriminator, price_var, share, default_var):
+    in_bin = data[data[credit_score_bin] == bin_label]
+    disc = in_bin[in_bin[parameter] == discriminated]
+    dom = in_bin[in_bin[parameter] == discriminator]
+    if len(disc) == 0 or len(dom) == 0:
+        return 0.0
+    difference = disc[price_var].mean() - dom[price_var].mean()
+    if not difference > 0:
+        return 0.0
+    paid_share = 1 - disc[default_var].mean() if default_var else 1.0
+    return (paid_share * disc[loan_var].mean() * (difference / PERCENT)
+            * share * len(disc))
+
+
+def calculate_fairness_cost(df, Loan_var, CreditScoreBin, parameter, Discriminator,
+                            Discriminated, price_discriminator, fairness_degree,
+                            max_category, Default_var):
+    """Cost of closing a fixed share of the interest rate gap.
+
+    Parameters
+    - df: loans, one row per contract.
+    - Loan_var: loan amount column.
+    - CreditScoreBin: credit score bin column (lowest scores first).
+    - parameter: demographic column (e.g. 'Gender').
+    - Discriminator / Discriminated: dominant and discriminated groups.
+    - price_discriminator: interest rate column, in percent.
+    - fairness_degree: share of the gap to close (0 to 1).
+    - max_category: number of credit score bins, starting from the best
+      scores, that receive the adjustment.
+    - Default_var: default column (1 if the client defaulted, 0 otherwise).
+
+    Returns the total cost in currency units.
     """
-    Calculates the total cost for the bank to mitigate discrimination by adjusting interest rates to approximate
-    the rates offered to a dominant group. The function applies a fixed discount up to a specified credit score
-    category, aligning the interest rate of the discriminated group to that of the dominant group.
+    labels = _ordered_bins(df[CreditScoreBin])
+    total = sum(
+        _bin_cost(df, label, Loan_var, CreditScoreBin, parameter, Discriminated,
+                  Discriminator, price_discriminator, fairness_degree, Default_var)
+        for label in labels[:max_category])
+    return round(float(total), 2)
 
-    Parameters:
-    - df (pd.DataFrame): DataFrame containing loan information and demographic data.
-    - Loan_var (str): Column name for loan amount.
-    - CreditScoreBin (str): Column representing credit score categories (bins).
-    - parameter (str): Column representing the demographic group (e.g., 'Gender').
-    - Discriminator (str): Dominant group in the demographic parameter (e.g., 'Male').
-    - Discriminated (str): Group that experiences discrimination (e.g., 'Female').
-    - price_discriminator (str): Column representing the interest rate or similar price variable.
-    - fairness_degree (float): Degree to which the interest rate should be adjusted towards fairness.
-    - max_category (int): Maximum number of credit score categories to consider in the adjustment.
-    - Default_var (str): Column representing whether the client defaulted (1 if defaulted, 0 otherwise).
 
-    Returns:
-    - float: Rounded total cost of implementing fairer rates for the discriminated group.
+def calculate_fairness_cost_with_decay(data, Loan_var, CreditScoreBin, parameter,
+                                       price_discriminator, discriminated, discriminator,
+                                       max_discount, min_discount, max_category,
+                                       decay_factor, Default_var=None):
+    """Cost of closing a share of the gap that decays as credit scores worsen.
 
-    Steps:
-    1. Sorts the data by credit score category (`CreditScoreBin`).
-    2. Computes the average interest rates for both groups (Discriminator and Discriminated) in each category.
-    3. For each category up to `max_category`, calculates the cost if the rate for the discriminated group
-       exceeds that of the dominant group.
-    4. The cost is based on the loan amount, difference in interest rates, number of contracts, non-default rate,
-       and fairness degree.
+    The share closed in bin i (0 = best scores) is
+    max(max_discount - decay_factor * i, min_discount).
+    If `Default_var` is given, the cost is weighted by the share of paid
+    contracts, as in `calculate_fairness_cost`.
     """
-
-    data = df.copy()
-    data = data.sort_values(by=CreditScoreBin, ascending=True)
-    labels = data[CreditScoreBin].unique()
-
-    avg_interest = data.groupby([CreditScoreBin, parameter], observed=False)[price_discriminator].mean().unstack()
-
-    total_cost = 0
-
-    for i in range(max_category):
-        bin_label = labels[i]
-        if Discriminated in avg_interest.columns and Discriminator in avg_interest.columns:
-            discrim_rate = avg_interest.loc[bin_label, Discriminated]
-            dom_rate = avg_interest.loc[bin_label, Discriminator]
-
-            if not np.isnan(discrim_rate) and not np.isnan(dom_rate) and discrim_rate > dom_rate:
-                difference = discrim_rate - dom_rate
-                reduced_difference = difference
-
-                bin_data = data[(data[CreditScoreBin] == bin_label) & (data[parameter] == Discriminated)]
-                avg_loan_amount = bin_data[Loan_var].mean()
-                num_contracts = len(bin_data)
-                avg_non_default = 1 - bin_data[Default_var].mean()
-
-                cost = avg_loan_amount * reduced_difference * fairness_degree * num_contracts * avg_non_default
-                total_cost += cost
-
-    return round(total_cost, 2)
-
-
-def calculate_fairness_cost_with_decay(data, Loan_var, CreditScoreBin, parameter, price_discriminator, discriminated, discriminator, max_discount, min_discount, max_category, decay_factor):
-    """
-    Calculates the cost for the bank to mitigate discrimination with a discount that decays as the credit score
-    decreases. The discount reduces the interest rate for the discriminated group, gradually decreasing with
-    each lower credit score category.
-
-    Parameters:
-    - data (pd.DataFrame): DataFrame containing loan information and demographic data.
-    - Loan_var (str): Column name for loan amount.
-    - CreditScoreBin (str): Column representing credit score categories (bins).
-    - parameter (str): Column representing the demographic group (e.g., 'Gender').
-    - price_discriminator (str): Column representing the interest rate or similar price variable.
-    - discriminated (str): Group that experiences discrimination (e.g., 'Female').
-    - discriminator (str): Dominant group in the demographic parameter (e.g., 'Male').
-    - max_discount (float): Maximum discount to be applied to the interest rate difference.
-    - min_discount (float): Minimum discount to ensure a baseline adjustment even with decay.
-    - max_category (int): Maximum number of credit score categories to consider in the adjustment.
-    - decay_factor (float): Factor by which the discount decays as credit score decreases.
-
-    Returns:
-    - float: Total cost of applying a decaying discount to the interest rate for the discriminated group.
-
-    Steps:
-    1. Sorts data by credit score category (`CreditScoreBin`).
-    2. Calculates the average interest rates for both groups (discriminator and discriminated) in each category.
-    3. For each category up to `max_category`, calculates the cost if the rate for the discriminated group
-       exceeds that of the dominant group.
-    4. Applies a decaying discount to the difference in interest rates, reducing as credit score worsens.
-    5. The cost is based on the loan amount, reduced difference with discount, and number of contracts.
-
-    """
-
-    avg_interest = data.groupby([CreditScoreBin, parameter], observed=True)[price_discriminator].mean().unstack()
-    total_cost = 0
-
-    labels = data[CreditScoreBin].unique()
-
-    for i in range(max_category):
-        bin_label = labels[i]
-        if discriminated in avg_interest.columns and discriminator in avg_interest.columns:
-            discrim_rate = avg_interest.loc[bin_label, discriminated]
-            dom_rate = avg_interest.loc[bin_label, discriminator]
-
-            if not np.isnan(discrim_rate) and not np.isnan(dom_rate) and discrim_rate > dom_rate:
-                difference = discrim_rate - dom_rate
-
-                discount = max(max_discount - (decay_factor * i), min_discount)
-
-                reduced_difference = difference * discount
-
-                bin_data = data[(data[CreditScoreBin] == bin_label) & (data[parameter] == discriminated)]
-                avg_loan_amount = bin_data[Loan_var].mean()
-                num_contracts = len(bin_data)
-
-                cost = avg_loan_amount * reduced_difference * num_contracts
-                total_cost += cost
-
-    return round(total_cost, 2)
-
-
-# In[ ]:
-
-
-
-
+    labels = _ordered_bins(data[CreditScoreBin])
+    total = 0.0
+    for i, label in enumerate(labels[:max_category]):
+        share = max(max_discount - decay_factor * i, min_discount)
+        total += _bin_cost(data, label, Loan_var, CreditScoreBin, parameter,
+                           discriminated, discriminator, price_discriminator,
+                           share, Default_var)
+    return round(float(total), 2)

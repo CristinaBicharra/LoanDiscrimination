@@ -1,1 +1,1 @@
-Este diretório contém o código-fonte do projeto
+Source code: fairness metrics, cost of fairness and plots.
