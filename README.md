@@ -1,4 +1,4 @@
-# LoanDiscrimination
+# LoanDiscrimination Old
 Program to calculate fairness and the cost of being fair in credit loan domain
 Here’s a README template for your project that explains the directory structure, how to download and set up the repository, and instructions on how to run the Jupyter Notebook and modules with attention to address paths.
 
