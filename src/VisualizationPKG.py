@@ -3,62 +3,83 @@
 import os
 
 import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
+import numpy as np
+
+SCORE_LABEL = 'Credit score (higher = worse credit)'
+RATE_LABEL = 'Annual interest rate (%)'
+COLORS = {'Male': '#1f77b4', 'Female': '#d62728'}
+
+plt.rcParams.update({'font.size': 12, 'axes.titlesize': 14, 'axes.labelsize': 13,
+                     'legend.fontsize': 11, 'xtick.labelsize': 11, 'ytick.labelsize': 11})
 
 
-def plot_graph(df, x_variable, y_variable, graph_type, parameter, parameter_values,
-               aux_bins, aux_x_label, aux_y_label, aux_title,
-               output_dir='.', file_name=None, show=False):
-    """Draw and save one plot.
-
-    graph_type:
-    - 'scatter': y against x, one color per group in `parameter_values`;
-    - 'histogram': distribution of x, one color per group;
-    - 'line': y against x, one line per group;
-    - 'bins': number of clients of each group in bins of x (`aux_bins`);
-    - 'solo_bins': bar chart of y for each category in x.
-
-    Returns the path of the saved image.
-    """
-    fig, ax = plt.subplots(figsize=(10, 6))
-    if graph_type == 'scatter':
-        for value in parameter_values:
-            mask = df[parameter] == value
-            ax.scatter(df.loc[mask, x_variable], df.loc[mask, y_variable],
-                       alpha=0.6, s=8, label=value)
-    elif graph_type == 'histogram':
-        for value in parameter_values:
-            sns.histplot(df.loc[df[parameter] == value, x_variable], kde=True,
-                         label=value, bins=50, alpha=0.6, ax=ax)
-    elif graph_type == 'line':
-        for value in parameter_values:
-            part = df[df[parameter] == value].sort_values(by=x_variable)
-            ax.plot(part[x_variable], part[y_variable], label=value)
-    elif graph_type == 'bins':
-        binned = pd.cut(df[x_variable], bins=aux_bins, include_lowest=True)
-        summary = df.groupby([binned, parameter], observed=False).size().unstack(fill_value=0)
-        summary.plot(kind='bar', stacked=False, ax=ax)
-    elif graph_type == 'solo_bins':
-        ax.bar(df[x_variable].astype(str), df[y_variable], color='maroon', width=0.4)
-    else:
-        plt.close(fig)
-        raise ValueError("Unsupported graph type. Choose from 'scatter', "
-                         "'histogram', 'line', 'bins' or 'solo_bins'.")
-
-    ax.set_xlabel(aux_x_label)
-    ax.set_ylabel(aux_y_label)
-    ax.set_title(aux_title)
-    ax.tick_params(axis='x', rotation=45)
-    if ax.get_legend_handles_labels()[0]:
-        ax.legend()
-
+def _save(fig, output_dir, file_name, show=False):
     os.makedirs(output_dir, exist_ok=True)
-    if file_name is None:
-        file_name = f"{x_variable}_{y_variable}_{graph_type}_{parameter}.png"
     path = os.path.join(output_dir, file_name)
     fig.savefig(path, dpi=200, bbox_inches='tight')
     if show:
         plt.show()
     plt.close(fig)
     return path
+
+
+def plot_rate_histogram(df, rate_col, group_col, groups, output_dir='.',
+                        file_name='fig_interest_rate_histogram.png', bins=40):
+    """Number of contracts by interest rate, one color per group (Fig. 4)."""
+    fig, ax = plt.subplots(figsize=(10, 6))
+    edges = np.histogram_bin_edges(df[rate_col].dropna(), bins=bins)
+    for g in groups:
+        ax.hist(df.loc[df[group_col] == g, rate_col], bins=edges, alpha=0.55,
+                label=g, color=COLORS.get(g))
+    ax.set_xlabel(RATE_LABEL)
+    ax.set_ylabel('Number of contracts')
+    ax.set_title('Interest rate distribution by gender')
+    ax.legend()
+    return _save(fig, output_dir, file_name)
+
+
+def plot_rate_by_score(df, score_col, rate_col, group_col, groups, output_dir='.',
+                       file_name='fig_interest_rate_by_score.png'):
+    """Interest rate against credit score, one color per group."""
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for g in groups:
+        part = df[df[group_col] == g]
+        ax.scatter(part[score_col], part[rate_col], s=8, alpha=0.4, label=g, color=COLORS.get(g))
+    ax.set_xlabel(SCORE_LABEL)
+    ax.set_ylabel(RATE_LABEL)
+    ax.set_title('Interest rate by credit score')
+    ax.legend(markerscale=3)
+    return _save(fig, output_dir, file_name)
+
+
+def plot_gap_by_score(table, output_dir='.', file_name='fig_disparity_by_score_bin.png'):
+    """Weighted within-cell gap (Eq. 2) for each credit score bin, with 95% interval.
+
+    `table` has columns 'score_bin', 'eq2', 'ci_low', 'ci_high'.
+    """
+    fig, ax = plt.subplots(figsize=(11, 6))
+    x = np.arange(len(table))
+    err = np.vstack([table['eq2'] - table['ci_low'], table['ci_high'] - table['eq2']])
+    ax.bar(x, table['eq2'], color='#8c2d04', width=0.6)
+    ax.errorbar(x, table['eq2'], yerr=err, fmt='none', ecolor='black', capsize=4)
+    ax.axhline(0, color='grey', lw=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(table['score_bin'].astype(str), rotation=45, ha='right')
+    ax.set_xlabel(SCORE_LABEL)
+    ax.set_ylabel('Rate gap, women minus men (p.p.)')
+    ax.set_title('Interest rate gap within comparable cells, by credit score bin')
+    return _save(fig, output_dir, file_name)
+
+
+def plot_cost_curve(curve, output_dir='.', file_name='fig_cost_of_fairness.png'):
+    """Cost (% of term interest income) against the share of the gap closed."""
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for name, part in curve.groupby('score_cutoff', sort=False):
+        label = 'all scores' if name == 'all' else f'score <= {name}'
+        ax.plot(100 * part['alpha'], part['cost_pct_interest_income'], marker='o', label=label)
+    ax.set_xlabel('Share of the within-cell rate gap closed (%)')
+    ax.set_ylabel('Cost (% of term interest income)')
+    ax.set_title('Cost of fairness: lowering women\'s rates toward men\'s')
+    ax.legend(title='Contracts adjusted')
+    ax.grid(alpha=0.3)
+    return _save(fig, output_dir, file_name)
