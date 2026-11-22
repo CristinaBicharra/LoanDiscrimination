@@ -6,12 +6,12 @@ The repository measures whether two demographic groups with the same credit scor
 
 ## What is here and what is not
 
-The paper has two parts, and this repository covers the first one.
+The paper has two parts. The repository covers the first one with a simulated dataset, and reproduces the analysis of the second one on a synthetic dataset with the same structure.
 
 | Part of the paper | Data | In this repository? |
 |---|---|---|
-| Illustration of the method (fairness metrics, cost of fairness, Figure 4) | Simulated dataset | Yes: data, code and results |
-| Case study of a Brazilian bank (Tables 1 to 4, Figures 7 to 9) | Confidential loan records | No: the data cannot be shared, so those results appear only in the paper |
+| Illustration of the method (fairness metrics, cost of fairness, Figure 4) | `data/Simulated_Dataset.csv` (gender example) | Yes: data, code and results (`run_analysis.py`) |
+| Case study of a Brazilian bank (Tables 4 and 5, Figures 6 to 8) | Confidential loan records | The bank data cannot be shared. The same analysis runs on `data/Synthetic_Income_Dataset.csv`, an artificial dataset with the columns the method needs (`run_income_example.py`) |
 
 No bank data, and no result computed from bank data, is stored in this repository.
 
@@ -29,6 +29,30 @@ Summary of what the report shows:
 - **Cost of fairness.** Closing 100% of the within-cell gap for clients with credit score up to 0.4 costs R$ 53,744, or 1.82% of the term interest income of the portfolio. Closing it for every client costs 2.58%. The cost grows linearly with the share of the gap closed.
 
 These numbers describe simulated data built to contain discrimination. They show how the method works and are not findings about any real lender.
+
+## Income case study on synthetic data
+
+`data/Synthetic_Income_Dataset.csv` has 10,000 artificial personal-loan contracts (6,000 clients), built by `src/SyntheticIncome.py` with a fixed seed. By construction, borrowers earning less than R$ 2,000 a month (about two minimum wages) have the same credit-score and loan-to-income distributions as the other borrowers but pay 18 percentage points more per year. Default depends only on the credit score up to 0.4, and is somewhat higher for lower-income borrowers above it. Sex, age and marital status have no effect on the rate; schooling and age are correlated with income.
+
+```bash
+python run_income_example.py            # writes outputs/income_example/
+python run_income_example.py --regenerate  # rebuilds the dataset first
+```
+
+The report [`outputs/income_example/results_income.md`](outputs/income_example/results_income.md) shows, step by step: the distribution of the data, Table 4 (rate by credit-score range and income group), Eq. 1 and Eq. 2 in score x loan-to-income cells, the fixed-effects test with standard errors clustered by client (which recovers the 18 p.p. built into the data), the WDI, the cost of fairness with interest computed over each loan's term (Figure 6 and Table 5), and Figures 4, 7 and 8.
+
+| Column | Meaning |
+|---|---|
+| `ContractID`, `ClientID` | Contract and client identifiers (a client may have several contracts) |
+| `CreditScore` | Probability of default estimated by the lender, from 0 (best) to 1 (worst) |
+| `MonthlyIncome`, `IncomeGroup` | Monthly income (R$) and group: `< 2 MW` or `>= 2 MW` (threshold R$ 2,000) |
+| `LoanAmount`, `LoanToIncome` | Amount lent (R$) and loan amount divided by monthly income |
+| `Installments`, `PaidInstallments` | Number of installments, and installments paid (fewer than the total for defaulted contracts) |
+| `MonthlyRate`, `InterestRate` | Monthly rate (%) and annual rate (%), with ((1 + monthly/100)^12 - 1) x 100 |
+| `Sex`, `Age`, `SchoolingCode`, `Partner` | Borrower attributes (schooling code: odd values 3 to 29, higher = more years of schooling) |
+| `Default` | 1 if the contract defaulted, 0 otherwise |
+
+These numbers describe artificial data built to contain an income penalty. They show how the method works and are not findings about any lender.
 
 ## Data
 
