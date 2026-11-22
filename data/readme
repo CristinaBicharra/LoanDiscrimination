@@ -1,1 +1,3 @@
-Simulated dataset illustrating gender discrimination in bank loan pricing. The bank dataset used in the paper is confidential and is not included.
+Simulated_Dataset.csv: simulated dataset illustrating gender discrimination in bank loan pricing (run_analysis.py).
+Synthetic_Income_Dataset.csv: artificial dataset for the income case study, with the columns the method needs (run_income_example.py; built by src/SyntheticIncome.py).
+The bank dataset used in the paper is confidential and is not included.
