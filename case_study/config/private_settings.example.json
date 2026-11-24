@@ -1,0 +1,27 @@
+{
+  "_note": "Copy to private_settings.json and fill in. This file is not used if the private one exists.",
+  "raw_file": "<bank panel file, semicolon-separated, in data/>",
+  "product_rules": [
+    [
+      "<substring of the product group>",
+      "Credito_Pessoal"
+    ],
+    [
+      "<substring>",
+      "Consignado"
+    ]
+  ],
+  "location": {
+    "state": "<two-letter state code>",
+    "state_postcode_prefixes": [
+      0,
+      99
+    ],
+    "metro_postcode_prefixes": [
+      0,
+      0
+    ],
+    "postcode_income_file": "<csv with columns CEP, Renda_media_reais>",
+    "postcode_income_median": 0
+  }
+}

@@ -15,6 +15,15 @@ The paper has two parts. The repository covers the first one with a simulated da
 
 No bank data, and no result computed from bank data, is stored in this repository.
 
+## Code of the bank case study
+
+The folder [`case_study/`](case_study/README.md) contains the code that produced every table and figure of the
+case study in the paper (Section 4): sample construction, comparison within the bank's credit-risk classes and
+loan-to-income bins, regressions with borrower-clustered standard errors, tests with Holm correction, bootstrap
+confidence intervals, the default analysis, the cost of fairness, the analysis of other borrower characteristics and
+the XGBoost robustness check. The bank data are confidential; the code runs on the synthetic dataset of this
+repository so that every step can be executed (see `case_study/README.md`).
+
 ## Results
 
 The results on the simulated dataset are in [`outputs/results.md`](outputs/results.md). The page opens directly on GitHub, with tables and figures, so nothing needs to be installed to read it.

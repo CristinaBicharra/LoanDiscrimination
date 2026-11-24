@@ -1,0 +1,186 @@
+{
+  "_fonte": "Decisoes dos autores (23/11/2026). G1 = grupo potencialmente desfavorecido; diferenca = taxa(G1) - taxa(G2); positiva = G1 paga mais.",
+  "atributos": {
+    "renda": {
+      "rotulo": "Renda",
+      "G1": "Renda abaixo de R$ 2.000",
+      "G2": "Renda de R$ 2.000 ou mais",
+      "G1_en": "Income below R$2,000",
+      "G2_en": "Income R$2,000 or more",
+      "rotulo_protegido": "< R$ 2.000",
+      "rotulo_referencia": ">= R$ 2.000"
+    },
+    "sexo": {
+      "coluna": "SEXO",
+      "regra_G1": "== 1",
+      "validos": [
+        1,
+        2
+      ],
+      "rotulo": "Sexo",
+      "G1": "Mulheres",
+      "G2": "Homens",
+      "G1_en": "Women",
+      "G2_en": "Men"
+    },
+    "idade": {
+      "coluna": "IDADE",
+      "regra_G1": ">= 60",
+      "rotulo": "Idade",
+      "G1": "60 anos ou mais",
+      "G2": "18 a 59 anos",
+      "G1_en": "Aged 60+",
+      "G2_en": "Aged 18-59"
+    },
+    "escolaridade": {
+      "coluna": "COD_ESCOLARIDADE",
+      "regra_G1": "< 13",
+      "rotulo": "Escolaridade",
+      "G1": "Abaixo do ensino medio (codigo < 13)",
+      "G2": "Ensino medio ou mais (codigo >= 13)",
+      "G1_en": "Less than high school",
+      "G2_en": "High school or more"
+    },
+    "estado_civil": {
+      "coluna": "COD_ESTADO_CIVIL",
+      "regra_G1": "not in [1, 5]",
+      "rotulo": "Estado civil",
+      "G1": "Sem conjuge",
+      "G2": "Casado ou uniao estavel (codigos 1 e 5)",
+      "G1_en": "No partner",
+      "G2_en": "Married or stable union"
+    },
+    "regiao": {
+      "coluna": "FORA_METROPOLITANA",
+      "regra_G1": "== 1",
+      "rotulo": "Regiao",
+      "G1": "Fora da regiao metropolitana da capital",
+      "G2": "Regiao metropolitana da capital",
+      "G1_en": "Outside the state-capital metro area",
+      "G2_en": "State-capital metro area"
+    },
+    "renda_cep": {
+      "coluna": "CEP_RENDA_BAIXA",
+      "regra_G1": "== 1",
+      "rotulo": "Renda do CEP",
+      "G1": "CEP com renda media abaixo da mediana do estado (Censo 2022)",
+      "G2": "CEP com renda media na mediana ou acima",
+      "G1_en": "Lower-income postcode",
+      "G2_en": "Higher-income postcode"
+    }
+  },
+  "salario_minimo_mensal": {
+    "_fonte": "Decreto 9.661/2019 (998); MP 916/2019 (1.039); MP 919/2020 (1.045); MP 1.021/2020 (1.100); MP 1.091/2021 (1.212)",
+    "2019-01": 998,
+    "2020-01": 1039,
+    "2020-02": 1045,
+    "2021-01": 1100,
+    "2022-01": 1212
+  },
+  "faixas": {
+    "_nota": "Grade score x (emprestimo/renda) do artigo (notebook Untitled2, 22 x 22). As pontas foram abertas (0 e 1 no score; 0 e infinito na razao) para nao descartar contratos.",
+    "score": [
+      0,
+      0.04,
+      0.05,
+      0.06,
+      0.07,
+      0.08,
+      0.09,
+      0.1,
+      0.11,
+      0.12,
+      0.13,
+      0.14,
+      0.15,
+      0.16,
+      0.17,
+      0.18,
+      0.19,
+      0.2,
+      0.25,
+      0.3,
+      0.4,
+      0.5,
+      1.0
+    ],
+    "emprestimo_renda": [
+      0,
+      0.04,
+      0.05,
+      0.06,
+      0.07,
+      0.08,
+      0.09,
+      0.1,
+      0.11,
+      0.12,
+      0.13,
+      0.14,
+      0.15,
+      0.16,
+      0.17,
+      0.18,
+      0.19,
+      0.2,
+      0.21,
+      0.22,
+      0.4,
+      0.65,
+      "inf"
+    ],
+    "valor_absoluto": "quantis",
+    "score_tabela": [
+      0,
+      0.04,
+      0.06,
+      0.08,
+      0.1,
+      0.14,
+      0.18,
+      0.2,
+      0.25,
+      0.3,
+      0.4,
+      0.5,
+      0.7,
+      1.0
+    ],
+    "parcelas": [
+      0,
+      1,
+      3,
+      6,
+      12,
+      24,
+      "inf"
+    ],
+    "taxa_wdi": [
+      0,
+      12,
+      35,
+      60,
+      95,
+      130,
+      150,
+      235,
+      "inf"
+    ],
+    "score_banco": [
+      0,
+      0.02,
+      0.04,
+      0.06,
+      0.08,
+      0.1,
+      0.15,
+      0.2,
+      0.25,
+      0.3,
+      0.4,
+      0.5,
+      1.0
+    ],
+    "_nota_score_banco": "Classes de risco do banco (Score_Risco_Limites_Dicionario.xlsx): 12 classes, 1 = [0; 0,02] ... 12 = (0,5; 1]."
+  }
+}

@@ -1,0 +1,7 @@
+data/
+outputs/
+paper/
+config/private_settings.json
+config/externo/
+__pycache__/
+*.parquet
